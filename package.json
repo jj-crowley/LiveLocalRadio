@@ -1,0 +1,29 @@
+{
+  "name": "route666-live",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Route666.live - underground desert music listings, bands, and OK Gramps articles.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:init": "node scripts/init-db.js",
+    "admin:create": "node scripts/create-admin.js",
+    "site:configure": "node scripts/configure-site.js"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "next": "^14.2.18",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.18",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17"
+  }
+}

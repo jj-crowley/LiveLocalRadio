@@ -1,0 +1,22 @@
+[Unit]
+Description=Route666.live Next.js app
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/route666
+Environment=NODE_ENV=production
+Environment=ROUTE666_DB_PATH=/var/www/route666/data/route666.db
+Environment=ROUTE666_UPLOAD_DIR=/var/www/route666/storage/uploads
+Environment=ROUTE666_RADIO_DIR=/var/www/route666/storage/radio
+Environment=ROUTE666_TIME_ZONE=America/Denver
+Environment=ROUTE666_VIDEO_DIR=/var/www/route666/storage/videos
+Environment=ROUTE666_BAND_VIDEO_FILE=band-video.mp4
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
