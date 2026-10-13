@@ -1,5 +1,11 @@
-import { NextResponse } from "next/server";
+import { rejectCrossSitePost } from "@/lib/requestSecurity";
+import { redirectTo } from "@/lib/redirect";
 
 export async function POST(request) {
-  return NextResponse.redirect(new URL("/admin/login", request.url), { status: 303 });
+  const crossSite = rejectCrossSitePost(request);
+  if (crossSite) {
+    return crossSite;
+  }
+
+  return redirectTo(request, "/admin/login");
 }

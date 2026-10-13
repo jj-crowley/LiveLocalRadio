@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentAdmin } from "@/lib/adminAuth";
 import { getContactMessagesForAdmin } from "@/lib/db";
+import { getStorageStats } from "@/lib/storageStats";
 
 export const metadata = {
   title: "Contact Messages | Route666.live"
@@ -18,6 +19,7 @@ export default async function AdminMessagesPage({ searchParams }) {
   }
 
   const messages = getContactMessagesForAdmin();
+  const storageStats = getStorageStats();
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
@@ -31,7 +33,9 @@ export default async function AdminMessagesPage({ searchParams }) {
           <Link className="border border-newsprint/35 px-3 py-2 text-newsprint hover:border-radio hover:text-radio" href="/admin/articles">New article</Link>
           <Link className="border border-newsprint/35 px-3 py-2 text-newsprint hover:border-radio hover:text-radio" href="/admin/radio">Schedule radio</Link>
           <Link className="border border-newsprint/35 px-3 py-2 text-newsprint hover:border-radio hover:text-radio" href="/admin/profiles">Profiles</Link>
+          <Link className="border border-newsprint/35 px-3 py-2 text-newsprint hover:border-radio hover:text-radio" href="/admin/settings">Settings</Link>
           <Link className="border border-newsprint/35 px-3 py-2 text-newsprint hover:border-radio hover:text-radio" href="/admin/accounts">Admin accounts</Link>
+          <Link className="border border-newsprint/35 px-3 py-2 text-newsprint hover:border-rust hover:text-rust" href="/admin/takedown">Takedowns</Link>
           <form action="/api/admin/logout" method="post">
             <button className="border border-newsprint/35 px-3 py-2 text-newsprint hover:border-rust hover:text-rust" type="submit">Log out</button>
           </form>
@@ -40,6 +44,37 @@ export default async function AdminMessagesPage({ searchParams }) {
 
       {query?.read ? <p className="mt-6 font-mono text-sm text-arcade">Message marked read.</p> : null}
       {query?.error ? <p className="mt-6 font-mono text-sm text-rust">Could not update that message.</p> : null}
+
+      <section className="mt-8 grid gap-4 border-2 border-newsprint bg-ink p-5 shadow-glow lg:grid-cols-[1fr_1.4fr]">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.25em] text-arcade">Storage monitor</p>
+          <h2 className="mt-2 font-display text-3xl uppercase text-bone">Disk Space</h2>
+          <p className="mt-3 break-all font-mono text-xs text-newsprint">{storageStats.path}</p>
+        </div>
+        <div>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="font-mono text-xs uppercase text-newsprint">Storage folder</p>
+              <p className="mt-1 font-display text-4xl uppercase text-radio">{storageStats.totalLabel}</p>
+            </div>
+            <div className="text-right font-mono text-xs uppercase text-newsprint">
+              <p>{storageStats.disk.freeLabel} free</p>
+              <p>{storageStats.disk.usedLabel} used of {storageStats.disk.totalLabel}</p>
+            </div>
+          </div>
+          <div className="mt-4 h-4 border-2 border-newsprint bg-tar">
+            <div className="h-full bg-rust" style={{ width: `${storageStats.disk.usedPercent}%` }} />
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            {storageStats.folders.map((folder) => (
+              <div className="border border-newsprint/35 bg-tar p-3" key={folder.path}>
+                <p className="font-mono text-xs uppercase text-arcade">{folder.label}</p>
+                <p className="mt-1 font-display text-2xl uppercase text-bone">{folder.bytes ? formatAdminBytes(folder.bytes) : "0 B"}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <div className="mt-8 grid gap-5">
         {messages.length === 0 ? (
@@ -71,4 +106,17 @@ export default async function AdminMessagesPage({ searchParams }) {
       </div>
     </div>
   );
+}
+
+function formatAdminBytes(bytes) {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = Number(bytes || 0);
+  let unitIndex = 0;
+
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
 }

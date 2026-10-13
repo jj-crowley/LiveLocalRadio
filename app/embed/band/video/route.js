@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request) {
   const url = new URL(request.url);
   const video = getBandVideo(url.searchParams.get("v") || url.searchParams.get("file"));
+  const videoSrc = video ? escapeHtmlAttribute(video.src) : "";
   const body = `<!doctype html>
 <html lang="en">
 <head>
@@ -19,13 +20,24 @@ export async function GET(request) {
   </style>
 </head>
 <body>
-  ${video ? `<video controls playsinline preload="metadata" src="${video.src}"></video>` : `<div class="empty">Route666 video not loaded.</div>`}
+  ${video ? `<video controls playsinline preload="metadata" src="${videoSrc}"></video>` : `<div class="empty">Route666 video not loaded.</div>`}
 </body>
 </html>`;
 
   return new Response(body, {
     headers: {
-      "Content-Type": "text/html; charset=utf-8"
+      "Content-Security-Policy": "default-src 'none'; media-src 'self'; style-src 'unsafe-inline';",
+      "Content-Type": "text/html; charset=utf-8",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "X-Content-Type-Options": "nosniff"
     }
   });
+}
+
+function escapeHtmlAttribute(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }

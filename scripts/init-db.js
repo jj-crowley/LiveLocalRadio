@@ -1,13 +1,19 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
+const siteDefaults = require("../data/site-defaults.json");
 
 const projectRoot = process.cwd();
 const dbPath = process.env.ROUTE666_DB_PATH || path.join(projectRoot, "data", "route666.db");
 const schemaPath = path.join(projectRoot, "data", "schema.sql");
+const shouldBackupReset = process.argv.includes("--backup-reset");
 
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 fs.mkdirSync(path.join(projectRoot, "storage", "uploads"), { recursive: true });
+
+if (shouldBackupReset) {
+  backupAndResetDatabase(dbPath);
+}
 
 const db = new DatabaseSync(dbPath);
 const schema = fs.readFileSync(schemaPath, "utf8");
@@ -47,6 +53,15 @@ function ensureArticleColumns() {
 }
 
 ensureArticleColumns();
+
+const insertDefaultSiteSetting = db.prepare(`
+  INSERT OR IGNORE INTO site_settings (key, value)
+  VALUES (?, ?)
+`);
+
+Object.entries(siteDefaults).forEach(([key, value]) => {
+  insertDefaultSiteSetting.run(key, value);
+});
 
 const insertBand = db.prepare(`
   INSERT INTO bands (name, slug, genre, hometown, bio, featured)
@@ -248,3 +263,33 @@ if (process.env.ROUTE666_SEED_DEMO === "1") {
 db.close();
 
 console.log(`Route666 database initialized at ${dbPath}`);
+
+function backupAndResetDatabase(databasePath) {
+  const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
+  const backupDir = path.join(path.dirname(databasePath), "backups");
+  const backupBase = path.join(backupDir, `${path.basename(databasePath)}.${timestamp}`);
+  const files = [
+    databasePath,
+    `${databasePath}-wal`,
+    `${databasePath}-shm`
+  ];
+  const existingFiles = files.filter((file) => fs.existsSync(file));
+
+  fs.mkdirSync(backupDir, { recursive: true });
+
+  if (existingFiles.length) {
+    existingFiles.forEach((file) => {
+      fs.copyFileSync(file, `${backupBase}${file.slice(databasePath.length)}`);
+    });
+  }
+
+  existingFiles.forEach((file) => {
+    fs.unlinkSync(file);
+  });
+
+  if (existingFiles.length) {
+    console.log(`Backed up existing database to ${backupBase}`);
+  } else {
+    console.log("No existing database found. Creating a fresh database.");
+  }
+}

@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { createProfileSubmission } from "@/lib/db";
+import { redirectTo } from "@/lib/redirect";
 import { saveUpload } from "@/lib/uploads";
 
 const maxBioLength = 1200;
@@ -11,7 +11,7 @@ export async function POST(request) {
     const trap = clean(formData.get("website"));
 
     if (trap) {
-      return NextResponse.redirect(new URL("/submit?sent=1", request.url), { status: 303 });
+      return redirectTo(request, "/submit?sent=1");
     }
 
     const bandName = clean(formData.get("bandName"));
@@ -31,19 +31,19 @@ export async function POST(request) {
       .filter((song) => isRealFile(song.file));
 
     if (!bandName || !contactEmail || !bio) {
-      return NextResponse.redirect(new URL("/submit?error=missing", request.url), { status: 303 });
+      return redirectTo(request, "/submit?error=missing");
     }
 
     if (bio.length > maxBioLength) {
-      return NextResponse.redirect(new URL("/submit?error=bio", request.url), { status: 303 });
+      return redirectTo(request, "/submit?error=bio");
     }
 
     if (!photos.length) {
-      return NextResponse.redirect(new URL("/submit?error=photo", request.url), { status: 303 });
+      return redirectTo(request, "/submit?error=photo");
     }
 
     if (!streamPermission) {
-      return NextResponse.redirect(new URL("/submit?error=permission", request.url), { status: 303 });
+      return redirectTo(request, "/submit?error=permission");
     }
 
     const photoUploads = [];
@@ -51,7 +51,7 @@ export async function POST(request) {
 
     for (const photo of photos) {
       if (!photo.type.startsWith("image/")) {
-        return NextResponse.redirect(new URL("/submit?error=file", request.url), { status: 303 });
+        return redirectTo(request, "/submit?error=file");
       }
 
       photoUploads.push(await saveUpload(photo));
@@ -59,11 +59,11 @@ export async function POST(request) {
 
     for (const song of songs) {
       if (!song.title) {
-        return NextResponse.redirect(new URL("/submit?error=songTitle", request.url), { status: 303 });
+        return redirectTo(request, "/submit?error=songTitle");
       }
 
       if (!["audio/mpeg", "audio/mp3"].includes(song.file.type)) {
-        return NextResponse.redirect(new URL("/submit?error=file", request.url), { status: 303 });
+        return redirectTo(request, "/submit?error=file");
       }
 
       const upload = await saveUpload(song.file, {
@@ -92,9 +92,9 @@ export async function POST(request) {
       streamPermissionText
     });
 
-    return NextResponse.redirect(new URL("/submit?sent=1", request.url), { status: 303 });
+    return redirectTo(request, "/submit?sent=1");
   } catch {
-    return NextResponse.redirect(new URL("/submit?error=upload", request.url), { status: 303 });
+    return redirectTo(request, "/submit?error=upload");
   }
 }
 
@@ -105,9 +105,18 @@ function clean(value) {
 function parseLinks(value) {
   return value
     .split(/\r?\n/)
-    .map((link) => link.trim())
+    .map((link) => normalizeHttpUrl(link.trim()))
     .filter(Boolean)
     .slice(0, 8);
+}
+
+function normalizeHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) ? url.toString() : "";
+  } catch {
+    return "";
+  }
 }
 
 function isRealFile(file) {

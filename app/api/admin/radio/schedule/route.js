@@ -1,13 +1,19 @@
-import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/adminAuth";
 import { getProfileSubmissionById } from "@/lib/db";
 import { scheduleSubmissionForRadio } from "@/lib/radioScheduler";
+import { rejectCrossSitePost } from "@/lib/requestSecurity";
+import { redirectTo } from "@/lib/redirect";
 
 export async function POST(request) {
+  const crossSite = rejectCrossSitePost(request);
+  if (crossSite) {
+    return crossSite;
+  }
+
   const admin = await getCurrentAdmin();
 
   if (!admin) {
-    return NextResponse.redirect(new URL("/admin/login", request.url), { status: 303 });
+    return redirectTo(request, "/admin/login");
   }
 
   try {
@@ -23,8 +29,8 @@ export async function POST(request) {
       day: formData.get("day")
     });
 
-    return NextResponse.redirect(new URL("/admin/radio?scheduled=1", request.url), { status: 303 });
+    return redirectTo(request, "/admin/radio?scheduled=1");
   } catch {
-    return NextResponse.redirect(new URL("/admin/radio?error=1", request.url), { status: 303 });
+    return redirectTo(request, "/admin/radio?error=1");
   }
 }

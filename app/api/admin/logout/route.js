@@ -1,7 +1,13 @@
-import { NextResponse } from "next/server";
+import { rejectCrossSitePost } from "@/lib/requestSecurity";
+import { redirectTo } from "@/lib/redirect";
 
 export async function POST(request) {
-  const response = NextResponse.redirect(new URL("/admin/login", request.url), { status: 303 });
+  const crossSite = rejectCrossSitePost(request);
+  if (crossSite) {
+    return crossSite;
+  }
+
+  const response = redirectTo(request, "/admin/login");
   response.cookies.delete("route666_admin");
   return response;
 }

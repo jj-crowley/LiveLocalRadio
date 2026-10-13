@@ -32,6 +32,20 @@ Use Node.js 22.5+ for the built-in SQLite module. Node 24+ is recommended for de
 
 Open `http://localhost:3000`.
 
+## Current Features
+
+- Native artist submission form for bio, contact info, photos, links, song titles, and up to three MP3 uploads
+- Admin review workflow that publishes approved artists to the public artist page
+- Site-wide radio player that follows the current day schedule and starts playback at the current station-time offset
+- Homepage Now Playing feature panel with the current artist image, current track title, and expanded artist bio
+- Weekday radio folders with artist blocks so multiple songs from the same artist play together
+- Admin radio scheduler for copying approved MP3s into weekday radio blocks
+- Admin takedown page for removing published artists, scheduled radio tracks, artist blocks, and recording takedown reasons
+- Admin storage monitor showing total `storage/` usage, uploads/radio/videos breakdown, and remaining disk space
+- Contact form stored in SQLite for admin review
+- Admin settings page for editing homepage text boxes
+- Local video page and embeddable video player with masked video IDs
+
 ## Folder Structure
 
 ```text
@@ -54,6 +68,14 @@ Initialize the local database:
 ```bash
 npm run db:init
 ```
+
+Back up the current database and create a fresh empty one for testing:
+
+```bash
+npm run db:init -- --backup-reset
+```
+
+Backups are written to `data/backups/`. The reset keeps uploaded files untouched; it only replaces the SQLite database.
 
 Default database path is `data/route666.db`. Override it with:
 
@@ -210,12 +232,14 @@ Override the directory or default filename with:
 ROUTE666_VIDEO_DIR=/absolute/path/videos ROUTE666_BAND_VIDEO_FILE=band-video.mp4 npm run dev
 ```
 
-API endpoint:
+Admin-only upload API endpoint:
 
 ```text
 POST /api/uploads
 multipart/form-data field: file
 ```
+
+This endpoint requires an active admin session. Public artist uploads should go through `/submit`, which stores the full profile submission for admin review.
 
 ## Artist Profile Intake
 
@@ -255,6 +279,42 @@ After logging in, existing admins can create additional accounts at `/admin/acco
 
 Contact form messages are saved to SQLite and can be reviewed at `/admin/messages`.
 
+## Admin Pages
+
+Admin routes are documented here for site operators. Do not rely on hidden URLs for security; every admin page should require a valid admin login, strong passwords, and HTTPS in production.
+
+Available admin pages:
+
+```text
+/admin/login       Admin login page
+/admin/accounts    View admin users, create extra admin accounts, change your own password, and log out
+/admin/profiles    Review submitted artist profiles, photos, links, and songs
+/admin/radio       Schedule approved artist MP3s into weekday radio folders
+/admin/articles    Create music interviews and articles for Local Noise, OK Gramps, or the homepage
+/admin/messages    Read contact form submissions and view storage/disk usage
+/admin/settings    Edit homepage text boxes
+/admin/takedown    Remove published artists, scheduled radio tracks, and log takedown reasons
+```
+
+The first admin account should be created from the command line, not from a public setup form:
+
+```bash
+npm run admin:create -- username strong-password
+```
+
+To create another admin from the command line:
+
+```bash
+npm run admin:create -- new-username strong-password
+```
+
+To reset admin access when you are locked out, clear existing admin accounts and sessions from the server terminal, then create a fresh account:
+
+```bash
+sqlite3 data/route666.db "DELETE FROM admin_sessions; DELETE FROM admin_users;"
+npm run admin:create -- username strong-password
+```
+
 ## Production Notes
 
 Build with:
@@ -264,3 +324,59 @@ npm run build
 ```
 
 Run behind nginx with the sample config in `deploy/nginx.route666.live.conf`.
+
+## Safe Production Updates
+
+Use this process when copying updated code from the dev machine to production without losing the existing production database, submitted artists, uploaded photos, scheduled radio tracks, videos, or admin accounts.
+
+From the dev machine, rsync the code while excluding runtime/generated data:
+
+```bash
+rsync -avz \
+  --exclude 'node_modules/' \
+  --exclude '.next/' \
+  --exclude 'data/*.db' \
+  --exclude 'data/*.db-*' \
+  --exclude 'data/backups/' \
+  --exclude 'storage/uploads/' \
+  --exclude 'storage/radio/' \
+  --exclude 'storage/videos/' \
+  /Users/jcrowley/Sites/route666/ \
+  jjcrowley@route666:/var/www/route666/
+```
+
+The trailing `/` on the runtime directory excludes matters. It prevents rsync from touching the production `storage/uploads`, `storage/radio`, and `storage/videos` directories at all, including their timestamps and `.gitkeep` files.
+
+Do not add `--delete` to this command for normal production updates. `--delete` can remove production-only uploads, radio tracks, videos, or database files if they are not present on the dev machine.
+
+Then SSH into production and run:
+
+```bash
+cd /var/www/route666
+npm install
+npm run db:init
+npm run build
+sudo chown -R jjcrowley:www-data /var/www/route666
+sudo chmod -R g+rw /var/www/route666/data /var/www/route666/storage
+sudo find /var/www/route666/data /var/www/route666/storage -type d -exec chmod g+rwx {} \;
+sudo systemctl restart route666
+sudo systemctl status route666
+```
+
+The `npm run db:init` step is safe for normal updates. It creates any missing tables or indexes, but it does not erase production data unless you explicitly run it with `-- --backup-reset`.
+
+Before a major update, make a production backup:
+
+```bash
+cd /var/www/route666
+mkdir -p data/backups
+sqlite3 data/route666.db ".backup 'data/backups/route666.db.manual-backup'"
+tar -czf data/backups/storage.manual-backup.tar.gz storage
+```
+
+After updating, check:
+
+```bash
+sudo journalctl -u route666 -n 80 --no-pager
+sudo tail -n 80 /var/log/nginx/error.log
+```

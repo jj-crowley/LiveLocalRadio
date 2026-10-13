@@ -1,19 +1,25 @@
-import { NextResponse } from "next/server";
 import { createAdminUser, getCurrentAdmin } from "@/lib/adminAuth";
+import { rejectCrossSitePost } from "@/lib/requestSecurity";
+import { redirectTo } from "@/lib/redirect";
 
 export async function POST(request) {
+  const crossSite = rejectCrossSitePost(request);
+  if (crossSite) {
+    return crossSite;
+  }
+
   const admin = await getCurrentAdmin();
 
   if (!admin) {
-    return NextResponse.redirect(new URL("/admin/login", request.url), { status: 303 });
+    return redirectTo(request, "/admin/login");
   }
 
   try {
     const formData = await request.formData();
     createAdminUser(clean(formData.get("username")), clean(formData.get("password")));
-    return NextResponse.redirect(new URL("/admin/accounts?created=1", request.url), { status: 303 });
+    return redirectTo(request, "/admin/accounts?created=1");
   } catch {
-    return NextResponse.redirect(new URL("/admin/accounts?error=1", request.url), { status: 303 });
+    return redirectTo(request, "/admin/accounts?error=1");
   }
 }
 

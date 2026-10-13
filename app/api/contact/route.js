@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { createContactMessage } from "@/lib/db";
+import { redirectTo } from "@/lib/redirect";
 
 export async function POST(request) {
   try {
@@ -9,13 +9,13 @@ export async function POST(request) {
     const message = clean(formData.get("message"));
 
     if (!name || !email || !message) {
-      return NextResponse.redirect(new URL("/contact?error=1", request.url), { status: 303 });
+      return redirectTo(request, "/contact?error=1");
     }
 
     createContactMessage({ name, email, message });
-    return NextResponse.redirect(new URL("/contact?sent=1", request.url), { status: 303 });
+    return redirectTo(request, "/contact?sent=1");
   } catch {
-    return NextResponse.redirect(new URL("/contact?error=1", request.url), { status: 303 });
+    return redirectTo(request, "/contact?error=1");
   }
 }
 

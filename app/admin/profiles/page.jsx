@@ -31,13 +31,16 @@ export default async function AdminProfilesPage({ searchParams }) {
           <Link className="border border-newsprint/35 px-3 py-2 text-newsprint hover:border-radio hover:text-radio" href="/admin/articles">New article</Link>
           <Link className="border border-newsprint/35 px-3 py-2 text-newsprint hover:border-radio hover:text-radio" href="/admin/radio">Schedule radio</Link>
           <Link className="border border-newsprint/35 px-3 py-2 text-newsprint hover:border-radio hover:text-radio" href="/admin/messages">Messages</Link>
+          <Link className="border border-newsprint/35 px-3 py-2 text-newsprint hover:border-radio hover:text-radio" href="/admin/settings">Settings</Link>
           <Link className="border border-newsprint/35 px-3 py-2 text-newsprint hover:border-radio hover:text-radio" href="/admin/accounts">Admin accounts</Link>
+          <Link className="border border-newsprint/35 px-3 py-2 text-newsprint hover:border-rust hover:text-rust" href="/admin/takedown">Takedowns</Link>
           <form action="/api/admin/logout" method="post">
             <button className="border border-newsprint/35 px-3 py-2 text-newsprint hover:border-rust hover:text-rust" type="submit">Log out</button>
           </form>
         </div>
       </div>
 
+      {query?.published ? <p className="mt-6 font-mono text-sm text-arcade">Profile published to the artist page.</p> : null}
       {query?.reviewed ? <p className="mt-6 font-mono text-sm text-arcade">Profile marked reviewed.</p> : null}
       {query?.error ? <p className="mt-6 font-mono text-sm text-rust">Could not update that profile.</p> : null}
 
@@ -103,13 +106,11 @@ export default async function AdminProfilesPage({ searchParams }) {
               </div>
             ) : null}
 
-            {submission.status === "new" ? (
-              <form action={`/api/admin/profiles/${submission.id}/reviewed`} className="mt-5" method="post">
-                <button className="border-2 border-ink bg-radio px-4 py-3 font-mono text-sm uppercase text-ink shadow-flyer hover:bg-arcade" type="submit">
-                  Mark Reviewed
-                </button>
-              </form>
-            ) : null}
+            <form action={`/api/admin/profiles/${submission.id}/reviewed`} className="mt-5" method="post">
+              <button className="border-2 border-ink bg-radio px-4 py-3 font-mono text-sm uppercase text-ink shadow-flyer hover:bg-arcade" type="submit">
+                {submission.status === "new" ? "Publish Artist Profile" : "Update Artist Profile"}
+              </button>
+            </form>
           </article>
         ))}
       </div>

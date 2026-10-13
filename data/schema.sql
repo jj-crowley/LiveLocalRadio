@@ -118,6 +118,23 @@ CREATE TABLE IF NOT EXISTS articles (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS site_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS takedown_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  admin_user_id INTEGER REFERENCES admin_users(id),
+  action TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_label TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  details_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_shows_starts_at ON shows(starts_at);
 CREATE INDEX IF NOT EXISTS idx_show_submissions_status ON show_submissions(status);
 CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON contact_messages(status);
@@ -125,3 +142,4 @@ CREATE INDEX IF NOT EXISTS idx_profile_submissions_status ON profile_submissions
 CREATE INDEX IF NOT EXISTS idx_articles_section ON articles(section);
 CREATE INDEX IF NOT EXISTS idx_bands_slug ON bands(slug);
 CREATE INDEX IF NOT EXISTS idx_articles_slug ON articles(slug);
+CREATE INDEX IF NOT EXISTS idx_takedown_log_created_at ON takedown_log(created_at);

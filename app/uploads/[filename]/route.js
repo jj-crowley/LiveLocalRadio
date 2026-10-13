@@ -22,8 +22,9 @@ export async function GET(_request, { params }) {
     const file = await fs.readFile(filePath);
     return new NextResponse(file, {
       headers: {
+        "Cache-Control": "public, max-age=31536000, immutable",
         "Content-Type": contentTypes[extension] || "application/octet-stream",
-        "Cache-Control": "public, max-age=31536000, immutable"
+        "X-Content-Type-Options": "nosniff"
       }
     });
   } catch {
